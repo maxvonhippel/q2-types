@@ -368,6 +368,17 @@ def _fastq_manifest_helper(fmt, fastq_copy_fn, single_end):
             [sample_id, output_fastq_fp.name, direction])
         fastq_copy_fn(input_fastq_fp, str(output_fastq_fp))
 
+    for direction in ['forward', 'reverse']:
+        duplicated_ids = _duplicated_ids([s[0] for s in output_manifest_data
+                                          if s[2] == direction])
+        if len(duplicated_ids) > 0:
+            raise ValueError('Each sample id can have only one % read '
+                             'record in a paired-end read manifest, but the '
+                             'following sample ids were associated with more '
+                             'than one % read record: '
+                             '%s' % (direction, direction,
+                                     ', '.join(duplicated_ids)))
+
     output_manifest = FastqManifestFormat()
     output_manifest_df = \
         pd.DataFrame(output_manifest_data,
