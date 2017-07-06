@@ -47,6 +47,12 @@ def _1(dirfmt: SingleLanePerSampleSingleEndFastqDirFmt) \
         filepath = str(dirfmt.path / filename)
         result[sample_id] = skbio.io.read(filepath, format='fastq',
                                           constructor=skbio.DNA)
+    duplicated_ids = _duplicated_ids(result.keys())
+    if len(duplicated_ids) > 0:
+        raise ValueError('Each sample id can only appear one time in a '
+                         'manifest for single-end reads, but the following '
+                         'sample ids were observed more than once: '
+                         '%s' % ', '.join(duplicated_ids))
     return result
 
 
@@ -71,6 +77,13 @@ def _2(dirfmt: SingleLanePerSamplePairedEndFastqDirFmt) \
     result = PerSamplePairedDNAIterators()
     # ensure that dirfmt stays in scope as long as result does
     result.__dirfmt = dirfmt
+    duplicated_ids_forward = _duplicated_ids(forward_paths.keys())
+    if len(duplicated_ids_forward) > 0:
+        raise ValueError('Each sample id can have only one forward read '
+                         'record in a paired-end read manifest, but the '
+                         'following sample ids were associated with more '
+                         'than one forward read record: '
+                         '%s' % ', '.join(duplicated_ids_forward))
     for sample_id in forward_paths:
         result[sample_id] = forward_paths[sample_id], reverse_paths[sample_id]
     return result
@@ -82,6 +95,9 @@ def _single_lane_per_sample_fastq_helper(dirfmt, output_cls):
     manifest_fh = manifest.open()
     manifest_fh.write('sample-id,filename,direction\n')
     directions = ['forward', 'reverse']
+    samples = {}
+    samples['forward'] = []
+    samples['reverse'] = []
     for path, view in dirfmt.sequences.iter_views(FastqGzFormat):
 
         sample_id, barcode_id, lane_number, read_number, _ = \
@@ -94,6 +110,17 @@ def _single_lane_per_sample_fastq_helper(dirfmt, output_cls):
                                     lane_number=lane_number,
                                     read_number=read_number)
         manifest_fh.write('%s,%s,%s\n' % (sample_id, path, direction))
+        samples[direction].append(sample_id)
+
+    for direction in ['forward', 'reverse']:
+        duplicated_ids = _duplicated_ids(samples[direction])
+        if len(duplicated_ids) > 0:
+            raise ValueError('Each sample id can have only one % read '
+                             'record in a paired-end read manifest, but the '
+                             'following sample ids were associated with more '
+                             'than one % read record: '
+                             '%s' % (direction, direction,
+                                     ', '.join(duplicated_ids)))
 
     manifest_fh.close()
     result.manifest.write_data(manifest, FastqManifestFormat)
@@ -126,15 +153,24 @@ def _5(dirfmt: SingleLanePerSamplePairedEndFastqDirFmt) \
     manifest = FastqManifestFormat()
 
     with manifest.open() as manifest_fh:
+        samples = []
         with dirfmt.manifest.view(FastqManifestFormat).open() as fh:
             iterator = iter(fh)
             manifest_fh.write(next(iterator))  # header line
             for line in iterator:
-                _, relpath, direction = line.rstrip().split(',')
+                sample_id, relpath, direction = line.rstrip().split(',')
+                samples.append[sample_id]
                 if direction == 'forward':
                     manifest_fh.write(line)
                     qiime2.util.duplicate(str(dirfmt.path / relpath),
                                           str(result.path / relpath))
+
+    duplicated_ids = _duplicated_ids(samples)
+    if len(duplicated_ids) > 0:
+        raise ValueError('Each sample id can only appear one time in a '
+                         'manifest for single-end reads, but the following '
+                         'sample ids were observed more than once: '
+                         '%s' % ', '.join(duplicated_ids))
 
     result.manifest.write_data(manifest, FastqManifestFormat)
 
