@@ -44,13 +44,10 @@ def _1(dirfmt: SingleLanePerSampleSingleEndFastqDirFmt) \
     next(fh)
     for line in fh:
         sample_id, filename, _ = line.split(',')
+        print(sample_id, filename)
         filepath = str(dirfmt.path / filename)
         result[sample_id] = skbio.io.read(filepath, format='fastq',
                                           constructor=skbio.DNA)
-    duplicated_ids = _duplicated_ids(result.keys())
-    if len(duplicated_ids) > 0:
-        raise ValueError('%s %s' % (_ids_single_end_manifest_warning,
-                                    ', '.join(duplicated_ids)))
     return result
 
 
