@@ -77,7 +77,7 @@ def _2(dirfmt: SingleLanePerSamplePairedEndFastqDirFmt) \
     result.__dirfmt = dirfmt
     duplicated_ids_forward = _duplicated_ids(forward_paths.keys())
     if len(duplicated_ids_forward) > 0:
-        raise ValueError('%s %s' % (_ids_paired_end_manifest_warning,
+        raise ValueError('%s %s' % (_ids_forward_warning,
                                     ', '.join(duplicated_ids_forward)))
     for sample_id in forward_paths:
         result[sample_id] = forward_paths[sample_id], reverse_paths[sample_id]
@@ -106,13 +106,6 @@ def _single_lane_per_sample_fastq_helper(dirfmt, output_cls):
                                     read_number=read_number)
         manifest_fh.write('%s,%s,%s\n' % (sample_id, path, direction))
         samples[direction].append(sample_id)
-
-    for direction in ['forward', 'reverse']:
-        duplicated_ids = _duplicated_ids(samples[direction])
-        if len(duplicated_ids) > 0:
-            raise ValueError('%s %s' % (_ids_paired_end_manifest_warning,
-                                        (direction, direction,
-                                         ', '.join(duplicated_ids))))
 
     manifest_fh.close()
     result.manifest.write_data(manifest, FastqManifestFormat)
@@ -354,7 +347,7 @@ def _fastq_manifest_helper(fmt, fastq_copy_fn, single_end):
         duplicated_ids = _duplicated_ids([s[0] for s in output_manifest_data
                                           if s[2] == direction])
         if len(duplicated_ids) > 0:
-            raise ValueError('%s %s' % (_ids_paired_end_manifest_warning,
+            raise ValueError('%s %s' % (_ids_forward_warning,
                                         (direction, direction,
                                          ', '.join(duplicated_ids))))
 
@@ -410,12 +403,6 @@ _ids_single_end_manifest_warning = ('Each sample id can only appear one '
                                     'time in a manifest for single-end '
                                     'reads, but the following sample ids '
                                     'were observed more than once:')
-
-_ids_paired_end_manifest_warning = ('Each sample id can have only one '
-                                    'forward read record in a paired-end '
-                                    'read manifest, but the following '
-                                    'sample ids were associated with more '
-                                    'than one forward read record:')
 
 _ids_forward_warning = ('Each sample id can have only one forward read '
                         'record in a paired-end read manifest, but the '

@@ -118,6 +118,37 @@ class TestTransformers(TestPluginBase):
         for act, exp in zip(obs, input):
             self.assertEqual(act, exp)
 
+    def test_duplicate_ids(self):
+        # test files setup
+        shutil.copy(
+            self.get_data_path('s1-phred64.fastq.gz'),
+            os.path.join(self.temp_dir.name, 'manifest-s1-phred64.fastq.gz'))
+        shutil.copy(
+            self.get_data_path('s2-phred64.fastq.gz'),
+            os.path.join(self.temp_dir.name, 'manifest-s2-phred64.fastq.gz'))
+
+        # manifest setup
+        manifest_fp = os.path.join(self.temp_dir.name, 'manifest-manifest')
+
+        with open(manifest_fp, 'w') as fh:
+            fh.write("sample-id,absolute-filepath,direction\n")
+            fh.write("sampleABC,%s/manifest-s1-phred64.fastq.gz,forward\n" %
+                     self.temp_dir.name)
+            fh.write("sampleABC,%s/manifest-s2-phred64.fastq.gz,forward\n" %
+                     self.temp_dir.name)
+
+        # formats setup
+        fastq_manifest_helper_format_ = SingleEndFastqManifestPhred64
+        fastq_manifest_helper_transformer = self.get_transformer(
+            fastq_manifest_helper_format_,
+            SingleLanePerSampleSingleEndFastqDirFmt)
+
+        # tests _fastq_manifest_helper
+        with self.assertRaisesRegex(ValueError, 'following sample ids were '
+                                    'observed more than once: sampleABC'):
+            fastq_manifest_helper_transformer(
+                fastq_manifest_helper_format_(manifest_fp, 'r'))
+
 
 class TestFastqManifestTransformers(TestPluginBase):
     package = "q2_types.per_sample_sequences.tests"
